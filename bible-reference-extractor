@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bible Reference Extractor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Bible Passage Reference Parser (browser CJS build) -->
+  <script src="https://cdn.jsdelivr.net/npm/bible-passage-reference-parser@latest/cjs/en_bcv_parser.js" charset="utf-8"></script>
+  <style>
+    :root {
+      --bg: #f7f5ff;
+      --fg: #1f1333;
+      --accent: #6d3df5;
+      --accent-soft: rgba(109, 61, 245, 0.12);
+      --border: #d0c4ff;
+      --radius-lg: 14px;
+      --radius-sm: 6px;
+      --shadow-soft: 0 16px 30px rgba(20, 10, 60, 0.12);
+      --font-ui: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                 "Segoe UI", sans-serif;
+      --font-mono: ui-monospace, Menlo, Monaco, "SF Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-ui);
+      background: radial-gradient(circle at top, #fdfbff, #ece7ff 60%, #e3ddff);
+      color: var(--fg);
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      box-shadow: var(--shadow-soft);
+      padding: 24px 26px 28px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+    }
+
+    header {
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      margin: 0;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1 span.icon {
+      display: inline-flex;
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: var(--accent-soft);
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    header p {
+      margin: 2px 0 0;
+      font-size: 0.95rem;
+      max-width: 480px;
+      color: #5a4d78;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6f628d;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      background: #fbfaff;
+      color: #251a3b;
+    }
+
+    textarea[readonly] {
+      background: #f6f3ff;
+    }
+
+    textarea::placeholder {
+      color: #a99ecc;
+    }
+
+    .controls {
+      margin: 14px 0 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: center;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: transform 0.08s ease, box-shadow 0.08s ease,
+                  background 0.12s ease;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 10px 20px rgba(109, 61, 245, 0.4);
+    }
+
+    button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(109, 61, 245, 0.45);
+    }
+
+    button.secondary {
+      background: #f0ecff;
+      color: #453769;
+    }
+
+    button.secondary:hover {
+      background: #e5dcff;
+    }
+
+    .button-icon {
+      font-size: 1.1em;
+    }
+
+    .options-panel {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 10px 12px 8px;
+      background: #faf8ff;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 18px;
+    }
+
+    .option-row span.label-inline {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.78rem;
+      color: #7a6b9b;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+    }
+
+    .radio-group label {
+      margin: 0;
+      text-transform: none;
+      letter-spacing: normal;
+      font-weight: 500;
+      color: #3f325d;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .radio-group input[type="radio"] {
+      accent-color: var(--accent);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      text-transform: none;
+      letter-spacing: normal;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      color: #3f325d;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      accent-color: var(--accent);
+    }
+
+    select, input[type="text"] {
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      padding: 4px 7px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      background: #fdfcff;
+    }
+
+    .status {
+      font-size: 0.82rem;
+      color: #7e6fa8;
+      margin-left: auto;
+    }
+
+    .status strong {
+      color: #4d3a83;
+    }
+
+    footer {
+      margin-top: 14px;
+      font-size: 0.78rem;
+      color: #998dbd;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    footer a {
+      color: #7a5dfa;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>
+        <span class="icon">📖</span>
+        Bible Reference Extractor
+      </h1>
+      <p>
+        Paste any text. I’ll find the Bible references, normalize them
+        (<em>Genesis 1:1–3</em> style), and spit out a clean list. No React, no fuss.
+      </p>
+    </header>
+
+    <div class="grid">
+      <section>
+        <label for="inputText">Input text</label>
+        <textarea id="inputText" placeholder="Paste paragraphs, sermon notes, footnotes, whatever...
+Examples:
+  I love Ps 23 and Jn 3:16–18.
+  1 Sam 2:3;4:5-6; I Jn 1:9; Rev 21:1–4"></textarea>
+
+        <div class="controls">
+          <button id="extractBtn" class="primary">
+            <span class="button-icon">✨</span>
+            Extract references
+          </button>
+          <button id="copyBtn" class="secondary">
+            <span class="button-icon">📋</span>
+            Copy output
+          </button>
+          <div class="status" id="statusText">Ready.</div>
+        </div>
+      </section>
+
+      <section>
+        <label>Output & options</label>
+        <div class="options-panel">
+          <div class="option-row">
+            <span class="label-inline">Format</span>
+            <div class="radio-group">
+              <label>
+                <input type="radio" name="format" value="plain" checked />
+                Plaintext (one per line)
+              </label>
+              <label>
+                <input type="radio" name="format" value="markdown" />
+                Markdown list
+              </label>
+              <label>
+                <input type="radio" name="format" value="gateway-md" />
+                Markdown → BibleGateway
+              </label>
+              <label>
+                <input type="radio" name="format" value="biblehub-md" />
+                Markdown → BibleHub
+              </label>
+            </div>
+          </div>
+
+          <div class="option-row">
+            <span class="label-inline">Links</span>
+            <div class="option-row" style="flex-wrap: wrap; gap: 8px 12px;">
+              <label for="gatewayVersion" style="margin: 0; font-weight: 500;">
+                BibleGateway version:
+              </label>
+              <select id="gatewayVersion">
+                <option value="ESV" selected>ESV</option>
+                <option value="NIV">NIV</option>
+                <option value="KJV">KJV</option>
+                <option value="CSB">CSB</option>
+                <option value="">(BibleGateway default)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="option-row">
+            <span class="label-inline">Extras</span>
+            <div class="checkbox-group">
+              <label>
+                <input type="checkbox" id="dedupe" checked />
+                Deduplicate identical references
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label for="outputText">Output</label>
+          <textarea id="outputText" readonly placeholder="Your normalized references will appear here..."></textarea>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <span>Uses <a href="https://github.com/openbibleinfo/Bible-Passage-Reference-Parser" target="_blank" rel="noopener noreferrer">Bible Passage Reference Parser</a>.</span>
+      <span>Normalized: full book names, Arabic numerals, en-dashes, one range per item.</span>
+    </footer>
+  </div>
+
+  <script>
+    // ---------- Book metadata (OSIS → full name + BibleHub slug) ----------
+    const BOOKS = {
+      // Old Testament
+      Gen:   { name: "Genesis",          hub: "genesis" },
+      Exod:  { name: "Exodus",           hub: "exodus" },
+      Lev:   { name: "Leviticus",        hub: "leviticus" },
+      Num:   { name: "Numbers",          hub: "numbers" },
+      Deut:  { name: "Deuteronomy",      hub: "deuteronomy" },
+      Josh:  { name: "Joshua",           hub: "joshua" },
+      Judg:  { name: "Judges",           hub: "judges" },
+      Ruth:  { name: "Ruth",             hub: "ruth" },
+      "1Sam": { name: "1 Samuel",        hub: "1_samuel" },
+      "2Sam": { name: "2 Samuel",        hub: "2_samuel" },
+      "1Kgs": { name: "1 Kings",         hub: "1_kings" },
+      "2Kgs": { name: "2 Kings",         hub: "2_kings" },
+      "1Chr": { name: "1 Chronicles",    hub: "1_chronicles" },
+      "2Chr": { name: "2 Chronicles",    hub: "2_chronicles" },
+      Ezra:  { name: "Ezra",             hub: "ezra" },
+      Neh:   { name: "Nehemiah",         hub: "nehemiah" },
+      Esth:  { name: "Esther",           hub: "esther" },
+      Job:   { name: "Job",              hub: "job" },
+      Ps:    { name: "Psalm",            hub: "psalms" },
+      Prov:  { name: "Proverbs",         hub: "proverbs" },
+      Eccl:  { name: "Ecclesiastes",     hub: "ecclesiastes" },
+      Song:  { name: "Song of Songs",    hub: "songs" },
+      Isa:   { name: "Isaiah",           hub: "isaiah" },
+      Jer:   { name: "Jeremiah",         hub: "jeremiah" },
+      Lam:   { name: "Lamentations",     hub: "lamentations" },
+      Ezek:  { name: "Ezekiel",          hub: "ezekiel" },
+      Dan:   { name: "Daniel",           hub: "daniel" },
+      Hos:   { name: "Hosea",            hub: "hosea" },
+      Joel:  { name: "Joel",             hub: "joel" },
+      Amos:  { name: "Amos",             hub: "amos" },
+      Obad:  { name: "Obadiah",          hub: "obadiah" },
+      Jonah: { name: "Jonah",            hub: "jonah" },
+      Mic:   { name: "Micah",            hub: "micah" },
+      Nah:   { name: "Nahum",            hub: "nahum" },
+      Hab:   { name: "Habakkuk",         hub: "habakkuk" },
+      Zeph:  { name: "Zephaniah",        hub: "zephaniah" },
+      Hag:   { name: "Haggai",           hub: "haggai" },
+      Zech:  { name: "Zechariah",        hub: "zechariah" },
+      Mal:   { name: "Malachi",          hub: "malachi" },
+
+      // New Testament
+      Matt:  { name: "Matthew",          hub: "matthew" },
+      Mark:  { name: "Mark",             hub: "mark" },
+      Luke:  { name: "Luke",             hub: "luke" },
+      John:  { name: "John",             hub: "john" },
+      Acts:  { name: "Acts",             hub: "acts" },
+      Rom:   { name: "Romans",           hub: "romans" },
+      "1Cor": { name: "1 Corinthians",   hub: "1_corinthians" },
+      "2Cor": { name: "2 Corinthians",   hub: "2_corinthians" },
+      Gal:   { name: "Galatians",        hub: "galatians" },
+      Eph:   { name: "Ephesians",        hub: "ephesians" },
+      Phil:  { name: "Philippians",      hub: "philippians" },
+      Col:   { name: "Colossians",       hub: "colossians" },
+      "1Thess": { name: "1 Thessalonians", hub: "1_thessalonians" },
+      "2Thess": { name: "2 Thessalonians", hub: "2_thessalonians" },
+      "1Tim": { name: "1 Timothy",       hub: "1_timothy" },
+      "2Tim": { name: "2 Timothy",       hub: "2_timothy" },
+      Titus: { name: "Titus",            hub: "titus" },
+      Phlm:  { name: "Philemon",         hub: "philemon" },
+      Heb:   { name: "Hebrews",          hub: "hebrews" },
+      Jas:   { name: "James",            hub: "james" },
+      "1Pet": { name: "1 Peter",         hub: "1_peter" },
+      "2Pet": { name: "2 Peter",         hub: "2_peter" },
+      "1John": { name: "1 John",         hub: "1_john" },
+      "2John": { name: "2 John",         hub: "2_john" },
+      "3John": { name: "3 John",         hub: "3_john" },
+      Jude:  { name: "Jude",             hub: "jude" },
+      Rev:   { name: "Revelation",       hub: "revelation" }
+      // Apocrypha intentionally omitted here
+    };
+
+    const EN_DASH = "\u2013";
+
+    // Global parser instance (from bible-passage-reference-parser)
+    const bcv = typeof bcv_parser !== "undefined" ? new bcv_parser() : null;
+
+    // You could tweak options here if desired:
+    // bcv.set_options({ sequence_combination_strategy: "combine" });
+
+    // ---------- Parsing helpers ----------
+
+    function parseOsisBCV(osis) {
+      const parts = osis.split(".");
+      const book = parts[0] || "";
+      let chapter = null;
+      let verse = null;
+
+      if (parts.length >= 2 && parts[1]) {
+        const c = parseInt(parts[1], 10);
+        if (!Number.isNaN(c)) chapter = c;
+      }
+      if (parts.length >= 3 && parts[2]) {
+        const match = parts[2].match(/\d+/);
+        if (match) {
+          const v = parseInt(match[0], 10);
+          if (!Number.isNaN(v)) verse = v;
+        }
+      }
+
+      return { book, chapter, verse };
+    }
+
+    function normalizeOsisSegment(segment) {
+      if (!segment) return null;
+
+      const [startStr, endStrRaw] = segment.split("-");
+      const start = parseOsisBCV(startStr);
+      const end = endStrRaw ? parseOsisBCV(endStrRaw) : { ...start };
+
+      const metaStart = BOOKS[start.book] || { name: start.book, hub: "" };
+      const metaEnd = BOOKS[end.book] || BOOKS[start.book] || { name: end.book, hub: "" };
+
+      const bookNameStart = metaStart.name;
+      const bookNameEnd = metaEnd.name;
+      const sameBook = start.book === end.book;
+
+      // Case 1: book-level (no chapter info)
+      if (!start.chapter) {
+        if (!end.chapter) {
+          if (sameBook) {
+            return {
+              label: bookNameStart,
+              start,
+              end,
+              metaStart
+            };
+          } else {
+            return {
+              label: `${bookNameStart}${EN_DASH}${bookNameEnd}`,
+              start,
+              end,
+              metaStart
+            };
+          }
+        }
+        // If OSIS somehow has end.chapter but not start.chapter, fall through.
+      }
+
+      // Case 2: chapter-level range (chapter present, verse missing)
+      if (start.chapter && !start.verse) {
+        if (sameBook) {
+          if (!end.chapter || end.chapter === start.chapter) {
+            return {
+              label: `${bookNameStart} ${start.chapter}`,
+              start,
+              end,
+              metaStart
+            };
+          } else {
+            return {
+              label: `${bookNameStart} ${start.chapter}${EN_DASH}${end.chapter}`,
+              start,
+              end,
+              metaStart
+            };
+          }
+        } else {
+          const endPart = end.chapter ? `${bookNameEnd} ${end.chapter}` : bookNameEnd;
+          return {
+            label: `${bookNameStart} ${start.chapter}${EN_DASH}${endPart}`,
+            start,
+            end,
+            metaStart
+          };
+        }
+      }
+
+      // Case 3: verse-level (chapter & verse present)
+      if (!start.chapter || !start.verse) {
+        // Weird edge case, treat as book if we somehow get here
+        return {
+          label: bookNameStart,
+          start,
+          end,
+          metaStart
+        };
+      }
+
+      // If end has no chapter/verse, it's effectively a single verse.
+      if (!end.chapter && !end.verse) {
+        return {
+          label: `${bookNameStart} ${start.chapter}:${start.verse}`,
+          start,
+          end,
+          metaStart
+        };
+      }
+
+      if (sameBook) {
+        // Same book
+        if (end.chapter === start.chapter) {
+          if (!end.verse || end.verse === start.verse) {
+            // Single verse
+            return {
+              label: `${bookNameStart} ${start.chapter}:${start.verse}`,
+              start,
+              end,
+              metaStart
+            };
+          }
+          // Verse range within same chapter
+          return {
+            label: `${bookNameStart} ${start.chapter}:${start.verse}${EN_DASH}${end.verse}`,
+            start,
+            end,
+            metaStart
+          };
+        } else {
+          // Cross-chapter range in same book
+          const endVersePart = end.verse ? `:${end.verse}` : "";
+          return {
+            label: `${bookNameStart} ${start.chapter}:${start.verse}${EN_DASH}${end.chapter}${endVersePart}`,
+            start,
+            end,
+            metaStart
+          };
+        }
+      } else {
+        // Cross-book range
+        const startPart = `${bookNameStart} ${start.chapter}${start.verse ? ":" + start.verse : ""}`;
+        const endPart = `${bookNameEnd}${end.chapter ? " " + end.chapter : ""}${end.verse ? ":" + end.verse : ""}`;
+        return {
+          label: `${startPart}${EN_DASH}${endPart}`,
+          start,
+          end,
+          metaStart
+        };
+      }
+    }
+
+    function extractNormalizedRefsFromText(text) {
+      if (!bcv) {
+        throw new Error("Bible parser library (bcv_parser) is not loaded.");
+      }
+
+      const parsed = bcv.parse(text);
+      const osis = parsed.osis(); // Single OSIS string for all references
+
+      if (!osis) return [];
+
+      const segments = osis.split(",").map(s => s.trim()).filter(Boolean);
+      const results = [];
+
+      for (const seg of segments) {
+        const norm = normalizeOsisSegment(seg);
+        if (norm && norm.label) {
+          results.push(norm);
+        }
+      }
+
+      return results;
+    }
+
+    // ---------- URL builders ----------
+
+    function buildBibleGatewayUrl(label, version) {
+      // Use normalized label but with ASCII hyphen for ranges
+      const query = encodeURIComponent(label.replace(/\u2013/g, "-"));
+      const vParam = version ? `&version=${encodeURIComponent(version)}` : "";
+      return `https://www.biblegateway.com/passage/?search=${query}${vParam}`;
+    }
+
+    function buildBibleHubUrl(refObj) {
+      const meta = refObj.metaStart || {};
+      const slug = meta.hub;
+      if (!slug) return "";
+
+      const ch = refObj.start.chapter;
+      const v = refObj.start.verse;
+
+      if (!ch) {
+        // Book only: punt to chapter 1, verse 1
+        return `https://biblehub.com/${slug}/1-1.htm`;
+      }
+
+      if (!v) {
+        // Chapter-only
+        return `https://biblehub.com/${slug}/${ch}.htm`;
+      }
+
+      // Verse-level: go to first verse of the range
+      return `https://biblehub.com/${slug}/${ch}-${v}.htm`;
+    }
+
+    // ---------- UI wiring ----------
+
+    const inputText = document.getElementById("inputText");
+    const outputText = document.getElementById("outputText");
+    const extractBtn = document.getElementById("extractBtn");
+    const copyBtn = document.getElementById("copyBtn");
+    const statusText = document.getElementById("statusText");
+    const dedupeCheckbox = document.getElementById("dedupe");
+    const gatewayVersionSelect = document.getElementById("gatewayVersion");
+
+    function getSelectedFormat() {
+      const radios = document.querySelectorAll('input[name="format"]');
+      for (const r of radios) {
+        if (r.checked) return r.value;
+      }
+      return "plain";
+    }
+
+    function formatOutput(refs) {
+      const format = getSelectedFormat();
+      const gatewayVersion = gatewayVersionSelect.value.trim();
+
+      if (refs.length === 0) return "";
+
+      if (format === "plain") {
+        return refs.map(r => r.label).join("\n");
+      }
+
+      if (format === "markdown") {
+        return refs.map(r => `- ${r.label}`).join("\n");
+      }
+
+      if (format === "gateway-md") {
+        return refs.map(r => {
+          const url = buildBibleGatewayUrl(r.label, gatewayVersion);
+          return `- [${r.label}](${url})`;
+        }).join("\n");
+      }
+
+      if (format === "biblehub-md") {
+        return refs.map(r => {
+          const url = buildBibleHubUrl(r);
+          return url ? `- [${r.label}](${url})` : `- ${r.label}`;
+        }).join("\n");
+      }
+
+      // Fallback
+      return refs.map(r => r.label).join("\n");
+    }
+
+    function handleExtract() {
+      const text = inputText.value || "";
+      const trimmed = text.trim();
+      if (!trimmed) {
+        outputText.value = "";
+        statusText.textContent = "No input text.";
+        return;
+      }
+
+      try {
+        const allRefs = extractNormalizedRefsFromText(trimmed);
+
+        let refs = allRefs;
+        if (dedupeCheckbox.checked) {
+          const seen = new Set();
+          refs = [];
+          for (const r of allRefs) {
+            if (!seen.has(r.label)) {
+              seen.add(r.label);
+              refs.push(r);
+            }
+          }
+        }
+
+        const formatted = formatOutput(refs);
+        outputText.value = formatted;
+
+        if (refs.length === 0) {
+          statusText.textContent = "No Bible references found.";
+        } else {
+          statusText.textContent = `Found ${refs.length} reference${refs.length === 1 ? "" : "s"}.`;
+        }
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "Error parsing references. Check console.";
+      }
+    }
+
+    function handleCopy() {
+      const text = outputText.value || "";
+      if (!text) {
+        statusText.textContent = "Nothing to copy.";
+        return;
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            statusText.textContent = "Output copied to clipboard.";
+          })
+          .catch(() => {
+            statusText.textContent = "Clipboard error. You may need to copy manually.";
+          });
+      } else {
+        // Fallback: select text so user can Cmd/Ctrl+C.
+        outputText.focus();
+        outputText.select();
+        statusText.textContent = "Select + copy (Ctrl/Cmd+C).";
+      }
+    }
+
+    extractBtn.addEventListener("click", handleExtract);
+    copyBtn.addEventListener("click", handleCopy);
+
+    // Quick keyboard shortcut: Cmd/Ctrl+Enter to extract
+    document.addEventListener("keydown", (evt) => {
+      if ((evt.metaKey || evt.ctrlKey) && evt.key === "Enter") {
+        evt.preventDefault();
+        handleExtract();
+      }
+    });
+  </script>
+</body>
+</html>
